@@ -18,21 +18,32 @@ def main():
     moma = MOMA(args.dir_moma)
 
     ids_act = moma.get_ids_act()
-    for id_act in ids_act:
+    N = len(ids_act)
+    for i, id_act in enumerate(ids_act, start=1):
+        path = osp.join(dir_moma, f"videos/raw/{id_act}.mp4")
+        url = f"https://youtu.be/{id_act}"
+        progress = f"[{i}/{N}]\t"
+        if osp.isdir(path):
+            already_downloaded = os.listdir(path)
+            if len(already_downloaded) > 0:
+                assert len(already_downloaded) == 1
+                print(f"{progress}skipping downloaded video {url} at {already_downloaded[0]}")
+                continue
+        print(f"{progress}downloading video from {url} to {path} ...")
         try:
-            url = osp.join(f"https://www.youtube.com/watch?v={id_act}")
-            yt = YouTube(url)
-        except:
-            print(f"Connection Error: {id_act}")
+            # https://stackoverflow.com/a/76588698
+            yt = YouTube(url, use_oauth=True)
 
-        # fmt: off
-        yt.streams\
-          .filter(progressive=True, file_extension="mp4")\
-          .order_by("resolution")\
-          .desc()\
-          .first()\
-          .download(osp.join(args.dir_moma, f"videos/raw/{id_act}.mp4"))
-        # fmt: on
+            # fmt: off
+            yt.streams\
+                .filter(progressive=True, file_extension="mp4")\
+                .order_by("resolution")\
+                .desc()\
+                .first()\
+                .download(path) # type: ignore
+            # fmt: on
+        except Exception as e:
+            print(f"\t\tFAILED: {e}")
 
 
 if __name__ == "__main__":
