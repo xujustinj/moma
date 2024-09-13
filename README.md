@@ -1,7 +1,6 @@
 <div align="center">
 <img src="figures/logo.png">
 
-
 ![activity](figures/moma.gif)
 
 **A dataset dedicated to multi-object, multi-actor activity parsing.**
@@ -10,8 +9,6 @@
 [[Documentation]](https://momaapi.rtfd.io)
 [[MOMA 1.0 Paper]](https://proceedings.neurips.cc/paper/2021/file/95688ba636a4720a85b3634acfec8cdd-Paper.pdf)
 
-
-___
 </div>
 
 
@@ -22,6 +19,7 @@ ___
   - [Class Distributions](#class-distributions)
 - [Dataset Layout](#dataset-layout)
 - [Annotation Schema](#annotation-schema)
+
 
 ## Installation
 
@@ -38,9 +36,6 @@ cd moma
 pip install -r requirements.txt
 pip install -e .
 ```
-
-
-
 
 
 ## Getting Started
@@ -72,16 +67,16 @@ python scripts/validate.py
 
 ## MOMA Hierarchy
 
-| Level | Concept&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; | Representation |
-| ----- | -------------------------------- | ---------------------------------------------------------------|
-| 1     | Activity                         | Semantic label                                                 |
-| 2     | Sub-activity                     | Temporal boundary and semantic label                           |
-| 3     | Atomic action                    | Spatial-temporal scene graph                                   |
-|       | ┗━&emsp;Entity                   | Graph node w/ bounding box, instance label, and semantic label |
-|       | &emsp;&emsp;┣━&emsp;Actor        | Same as above                                                  |
-|       | &emsp;&emsp;┗━&emsp;Object       | Same as above                                                  |
-|       | ┗━&emsp;Predicate                | A tuple containing a predicate and its associated entities     |
-|       | &emsp;&emsp;┗━&emsp;Relationship | A triple `(source node, semantic label, and target node)` that appears as a directed edge on an activity graph |
+| Level | Concept                          | Representation                                                                                                  |
+| ----- | -------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| 1     | Activity                         | Semantic label                                                                                                  |
+| 2     | Sub-activity                     | Temporal boundary and semantic label                                                                            |
+| 3     | Atomic action                    | Spatial-temporal scene graph                                                                                    |
+|       | ┗━&emsp;Entity                   | Graph node w/ bounding box, instance label, and semantic label                                                  |
+|       | &emsp;&emsp;┣━&emsp;Actor        | Same as above                                                                                                   |
+|       | &emsp;&emsp;┗━&emsp;Object       | Same as above                                                                                                   |
+|       | ┗━&emsp;Predicate                | A tuple containing a predicate and its associated entities                                                      |
+|       | &emsp;&emsp;┗━&emsp;Relationship | A triple `(source node, semantic label, and target node)` that appears as a directed edge on an activity graph  |
 |       | &emsp;&emsp;┗━&emsp;Attribute    | A double `(source node, semantic label)` that appears as a semantic label for a graph node on an activity graph |
 
 
@@ -90,25 +85,25 @@ python scripts/validate.py
 In this version, we include:
 
 - 148 hours of videos
-- 1,412 **activity** instances from [20 activity classes](https://raw.githubusercontent.com/d1ngn1gefe1/momatools/main/figures/activity.png?token=GHSAT0AAAAAABQHYNY25PBBGA4AIBT52DAAYPUG5AQ) ranging from 31s to 600s and with an average duration of 241s.
-- 15,842 **sub-activity** instances from [91 sub-activity classes](https://raw.githubusercontent.com/d1ngn1gefe1/momatools/main/figures/sub_activity.png?token=GHSAT0AAAAAABQHYNY2CEGAIBK5KOSZLLPWYPUG6EQ) ranging from 3s to 31s and with an average duration of 9s.
+- 1,412 **activity** instances from [20 activity classes](https://raw.githubusercontent.com/StanfordVL/moma/main/figures/act.png) ranging from 31s to 600s and with an average duration of 241s.
+- 15,842 **sub-activity** instances from [91 sub-activity classes](https://raw.githubusercontent.com/StanfordVL/moma/main/figures/sact.png) ranging from 3s to 31s and with an average duration of 9s.
 - 161,265 **higher-order interaction** instances.
-- 636,194 image **actor** instances and 104,564 video **actor** instances from [26 classes](https://raw.githubusercontent.com/d1ngn1gefe1/momatools/main/figures/actor.png?token=GHSAT0AAAAAABQHYNY3YODQHWF6ZEIKXHVGYPUG6WQ).
-- 349,034 image **object** instances and 47,494 video **object** instances from [126 classes](https://raw.githubusercontent.com/d1ngn1gefe1/momatools/main/figures/object.png?token=GHSAT0AAAAAABQHYNY2S2BOY2KXIIHDBSPIYPUG6YA).
-- 984,941 **relationship** instances from [19 classes](https://raw.githubusercontent.com/d1ngn1gefe1/momatools/main/figures/relationship.png?token=GHSAT0AAAAAABQHYNY3YR77CAOVI5JQBNZCYPUG7MA).
-- 261,249 **attribute** instances from [4 classes](https://raw.githubusercontent.com/d1ngn1gefe1/momatools/main/figures/attribute.png?token=GHSAT0AAAAAABQHYNY2KBQJLZ5BPJH7EKIKYPUG7PQ).
-- 52,072 **transitive action** instances from [33 classes](https://raw.githubusercontent.com/d1ngn1gefe1/momatools/main/figures/transitive_action.png?token=GHSAT0AAAAAABQHYNY3VTPGYBKO52XBPEUUYPUG7WQ).
-- 442,981 **intransitive action** instances from [9 classes](https://raw.githubusercontent.com/d1ngn1gefe1/momatools/main/figures/intransitive_action.png?token=GHSAT0AAAAAABQHYNY2O4HYZFXUG3S7M5UMYPUG7XA).
+- 636,194 image **actor** instances and 104,564 video **actor** instances from [26 classes](https://raw.githubusercontent.com/StanfordVL/moma/main/figures/actor.png).
+- 349,034 image **object** instances and 47,494 video **object** instances from [126 classes](https://raw.githubusercontent.com/StanfordVL/moma/main/figures/object.png).
+- 984,941 **relationship** instances from [19 classes](https://raw.githubusercontent.com/StanfordVL/moma/main/figures/rel.png).
+- 261,249 **attribute** instances from [4 classes](https://raw.githubusercontent.com/StanfordVL/moma/main/figures/att.png).
+- 52,072 **transitive action** instances from [33 classes](https://raw.githubusercontent.com/StanfordVL/moma/main/figures/ta.png).
+- 442,981 **intransitive action** instances from [9 classes](https://raw.githubusercontent.com/StanfordVL/moma/main/figures/ia.png).
 
 
 ### Class Distributions
 This section presents the class distributions of the concepts described in this paper.
 
-| Concept | Distribution | Concept | Distribution |
-| ------- | ------------ | ------- | ------------ |
-| Activity | ![activity](figures/act.png) | Sub-activity | ![sub_activity](figures/sact.png) |
-| Actor | ![actor](figures/actor.png) | Object | ![object](figures/object.png) |
-| Relationship | ![relationship](figures/rel.png) | Attribute | ![attribute](figures/att.png) |
+| Concept           | Distribution                         | Concept             | Distribution                           |
+| ----------------- | ------------------------------------ | ------------------- | -------------------------------------- |
+| Activity          | ![activity](figures/act.png)         | Sub-activity        | ![sub_activity](figures/sact.png)      |
+| Actor             | ![actor](figures/actor.png)          | Object              | ![object](figures/object.png)          |
+| Relationship      | ![relationship](figures/rel.png)     | Attribute           | ![attribute](figures/att.png)          |
 | Transitive Action | ![transitive_action](figures/ta.png) | Intransitive Action | ![intransitive_action](figures/ia.png) |
 
 
