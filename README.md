@@ -47,10 +47,16 @@ pip install -e .
 This section explains how to download, set up, and verify the MOMA-LRG dataset and its API.
 
 #### Download
-A script is provided to crawl raw videos in full resolution:
+A script is provided to crawl videos:
 ```
 python download/videos.py --dir-moma [path to MOMA-LRG]
 ```
+
+> **NOTE**:
+> The video crawl downloads the highest-quality progressive stream.
+> As of September 2024 this seems to produce videos no higher in quality than 360p, possibly due to changes on YouTube's end.
+> This means that the videos are no longer "raw" quality.
+> On the bright side, this makes the dataset take considerably less space to store.
 
 You can download the annotations with our script or directly from [Google Drive](https://drive.google.com/file/d/1stizUmyHY6aNxxbxUPD5DvoibBvUrKZW/view?usp=sharing):
 ```

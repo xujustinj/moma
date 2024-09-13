@@ -27,7 +27,7 @@ def main():
             already_downloaded = os.listdir(path)
             if len(already_downloaded) > 0:
                 assert len(already_downloaded) == 1
-                print(f"{progress}skipping downloaded video {url} at {already_downloaded[0]}")
+                print(f"{progress}skipping downloaded video {url} at {path}")
                 continue
         print(f"{progress}downloading video from {url} to {path} ...")
         try:
@@ -35,13 +35,13 @@ def main():
             yt = YouTube(url, use_oauth=True)
 
             # fmt: off
-            yt.streams\
+            stream = yt.streams\
                 .filter(progressive=True, file_extension="mp4")\
-                .order_by("resolution")\
-                .desc()\
-                .first()\
-                .download(path) # type: ignore
+                .get_highest_resolution()
             # fmt: on
+            assert stream is not None
+            print(f"\t\tusing highest MP4 quality {stream.resolution}")
+            stream.download(path)
         except Exception as e:
             print(f"\t\tFAILED: {e}")
 
