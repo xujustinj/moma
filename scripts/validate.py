@@ -14,9 +14,7 @@ def verify_dataset():
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "-d", "--dir-moma", type=str, default="/home/alan/data/moma-lrg"
-    )
+    parser.add_argument("-d", "--dir-moma", type=str, default=".data")
     args = parser.parse_args()
 
     verify_api(args)
