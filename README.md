@@ -5,7 +5,7 @@
 ![activity](figures/moma.gif)
 
 **A dataset dedicated to multi-object, multi-actor activity parsing.**
-  
+
 [[Website]](https://moma.stanford.edu/)
 [[Documentation]](https://momaapi.rtfd.io)
 [[MOMA 1.0 Paper]](https://proceedings.neurips.cc/paper/2021/file/95688ba636a4720a85b3634acfec8cdd-Paper.pdf)
@@ -98,7 +98,7 @@ In this version, we include:
 ### Class Distributions
 This section presents the class distributions of the concepts described in this paper.
 
-| Concept | Distribution | Concept | Distribution | 
+| Concept | Distribution | Concept | Distribution |
 | ------- | ------------ | ------- | ------------ |
 | Activity | ![activity](figures/act.png) | Sub-activity | ![sub_activity](figures/sact.png) |
 | Actor | ![actor](figures/actor.png) | Object | ![object](figures/object.png) |
@@ -108,12 +108,12 @@ This section presents the class distributions of the concepts described in this 
 
 ## Dataset Layout
 
-Download the dataset into a directory titled `dir_moma` with the structure below. 
+Download the dataset into a directory titled `.data` with the structure below.
 The `anns` directory requires roughly 1.8GB of space and the `video` directory requires 436 GB.
 You may not require all the folders in `videos` depending on the nature of your project.
 
 ```shell
-$ tree dir_moma
+$ tree .data
 .
 ├── anns/
 │    ├── anns.json

@@ -1,4 +1,5 @@
 import argparse
+import os
 import os.path as osp
 # https://stackoverflow.com/a/78898726
 from pytubefix import YouTube
@@ -9,11 +10,11 @@ from momaapi import MOMA
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "-d", "--dir-moma", type=str, default="/home/alanzluo/data/moma-lrg"
-    )
+    parser.add_argument("-d", "--dir-moma", type=str, default=".data")
     args = parser.parse_args()
+    dir_moma: str = args.dir_moma
 
+    os.makedirs(dir_moma, exist_ok=True)
     moma = MOMA(args.dir_moma)
 
     ids_act = moma.get_ids_act()
