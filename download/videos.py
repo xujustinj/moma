@@ -1,4 +1,5 @@
 import argparse
+from collections import defaultdict
 import os
 import os.path as osp
 # https://stackoverflow.com/a/78898726
@@ -19,6 +20,7 @@ def main():
 
     ids_act = moma.get_ids_act()
     N = len(ids_act)
+    failures: dict[str, list[str]] = defaultdict(list)
     for i, id_act in enumerate(ids_act, start=1):
         path = osp.join(dir_moma, f"videos/raw/{id_act}.mp4")
         url = f"https://youtu.be/{id_act}"
@@ -43,7 +45,20 @@ def main():
             print(f"\t\tusing highest MP4 quality {stream.resolution}")
             stream.download(path)
         except Exception as e:
-            print(f"\t\tFAILED: {e}")
+            failure = str(e)
+            print(f"\t\tFAILED: {failure}")
+            _id, reason = failure.split(" ", maxsplit=1)
+            assert _id == f"\033[91m{id_act}", list(_id)
+            failures[reason].append(id_act)
+
+    print("Download complete.")
+    F = sum(len(ids_act) for ids_act in failures.values())
+    if F > 0:
+        print(f"{F}/{N} videos failed to download.")
+        for reason, ids_act in failures.items():
+            print(f"  {len(ids_act)} videos with error \"[ID] {reason}\":")
+            for id_act in ids_act:
+                print(f"    {id_act}")
 
 
 if __name__ == "__main__":

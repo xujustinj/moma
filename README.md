@@ -48,6 +48,10 @@ python download/videos.py --dir-moma [path to MOMA-LRG]
 ```
 
 > **NOTE**:
+> As of September 13, 2024 at least 127 of the videos are inaccessible from YouTube.
+> See [`failures.txt`](failures.txt) for a list of the 138 videos that are inaccessible in Canada.
+
+> **NOTE**:
 > The video crawl downloads the highest-quality progressive stream.
 > As of September 2024 this seems to produce videos no higher in quality than 360p, possibly due to changes on YouTube's end.
 > This means that the videos are no longer "raw" quality.
