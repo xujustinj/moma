@@ -1,6 +1,8 @@
 import argparse
 import os.path as osp
-from pytube import YouTube
+# https://stackoverflow.com/a/78898726
+from pytubefix import YouTube
+# from pytube import YouTube
 
 from momaapi import MOMA
 
