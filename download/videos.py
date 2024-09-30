@@ -22,7 +22,7 @@ def main():
     N = len(ids_act)
     failures: dict[str, list[str]] = defaultdict(list)
     for i, id_act in enumerate(ids_act, start=1):
-        path = osp.join(dir_moma, f"videos/raw/{id_act}.mp4")
+        path = osp.join(dir_moma, f"videos/raw/{id_act}")
         url = f"https://youtu.be/{id_act}"
         progress = f"[{i}/{N}]\t"
         if osp.isdir(path):
@@ -43,7 +43,7 @@ def main():
             # fmt: on
             assert stream is not None
             print(f"\t\tusing highest MP4 quality {stream.resolution}")
-            stream.download(path)
+            stream.download(path, filename="video.mp4")
         except Exception as e:
             failure = str(e)
             print(f"\t\tFAILED: {failure}")
