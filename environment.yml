@@ -1,0 +1,22 @@
+name: moma
+channels:
+  - conda-forge
+  - nvidia
+  - pytorch
+dependencies:
+  - python
+  - pip
+  - distinctipy
+  - gdown
+  - ipykernel
+  - ipywidgets
+  - jsbeautifier
+  - matplotlib-base
+  - numpy
+  - pygraphviz
+  - pytorch
+  - scipy
+  - seaborn-base
+  - torchvision
+  - pip:
+      - pytubefix
