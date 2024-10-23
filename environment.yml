@@ -7,6 +7,7 @@ dependencies:
   - python
   - pip
   - distinctipy
+  - ffmpeg-python
   - gdown
   - ipykernel
   - ipywidgets
