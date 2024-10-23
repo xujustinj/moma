@@ -9,41 +9,36 @@ from pytubefix import YouTube
 from momaapi import MOMA
 
 
-def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-d", "--dir-moma", type=str, default=".data")
-    args = parser.parse_args()
-    dir_moma: str = args.dir_moma
-
-    os.makedirs(dir_moma, exist_ok=True)
-    moma = MOMA(args.dir_moma)
+def download(moma_dir: str):
+    os.makedirs(moma_dir, exist_ok=True)
+    moma = MOMA(moma_dir)
 
     ids_act = moma.get_ids_act()
     N = len(ids_act)
     failures: dict[str, list[str]] = defaultdict(list)
+    base_dir = osp.join(moma_dir, f"videos/raw")
     for i, id_act in enumerate(ids_act, start=1):
-        path = osp.join(dir_moma, f"videos/raw/{id_act}")
+        filename = f"{id_act}.mp4"
+        path = osp.join(base_dir, filename)
         url = f"https://youtu.be/{id_act}"
         progress = f"[{i}/{N}]\t"
-        if osp.isdir(path):
-            already_downloaded = os.listdir(path)
-            if len(already_downloaded) > 0:
-                assert len(already_downloaded) == 1
-                print(f"{progress}skipping downloaded video {url} at {path}")
-                continue
+        if osp.exists(path):
+            print(f"{progress}skipping downloaded video {url} at {path}")
+            continue
+
         print(f"{progress}downloading video from {url} to {path} ...")
         try:
             # https://stackoverflow.com/a/76588698
             yt = YouTube(url, use_oauth=True)
 
-            # fmt: off
             stream = yt.streams\
                 .filter(progressive=True, file_extension="mp4")\
                 .get_highest_resolution()
-            # fmt: on
+
             assert stream is not None
             print(f"\t\tusing highest MP4 quality {stream.resolution}")
-            stream.download(path, filename="video.mp4")
+            stream.download(path, filename=filename)
+
         except Exception as e:
             failure = str(e)
             print(f"\t\tFAILED: {failure}")
@@ -62,4 +57,9 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-d", "--moma-dir", type=str, default=".data")
+    args = parser.parse_args()
+    moma_dir: str = args.moma_dir
+
+    download(moma_dir=moma_dir)
