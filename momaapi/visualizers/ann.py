@@ -1,30 +1,44 @@
 from collections import defaultdict
-from distinctipy import distinctipy
 import glob
 import math
-from matplotlib import font_manager
 import os
 import os.path as osp
+import shutil
+import tempfile
+from typing import Optional
+
+from distinctipy import distinctipy
+from matplotlib import font_manager
 import PIL.Image as Image
 import PIL.ImageDraw as ImageDraw
 import PIL.ImageFont as ImageFont
 import pygraphviz as pgv
-import shutil
-import tempfile
 from torchvision import io
 
+from ..moma import MOMA
+from ..data import BBox, HOI
+from ..utils import assert_type, only, supress_stdout
 from .timeline import TimelineVisualizer
-from ..utils import supress_stdout
 
 
 class AnnVisualizer:
-    def __init__(self, moma, dir_vis=None):
-        if dir_vis is None:
-            dir_vis = tempfile.mkdtemp()
+    def __init__(self, moma: MOMA, vis_dir: Optional[str] = None):
+        if vis_dir is None:
+            vis_dir = tempfile.mkdtemp()
+        else:
+            os.makedirs(vis_dir, exist_ok=True)
 
         self.moma = moma
-        self.timeline_visualizer = TimelineVisualizer(moma, dir_vis)
-        self.dir_vis = dir_vis
+        self.timeline_visualizer = TimelineVisualizer(moma, vis_dir)
+
+        # paths
+        self.vis_dir = vis_dir
+
+        self.sact_dir = osp.join(self.vis_dir, "sact")
+        os.makedirs(self.sact_dir, exist_ok=True)
+
+        self.hoi_dir = osp.join(self.vis_dir, "hoi")
+        os.makedirs(self.hoi_dir, exist_ok=True)
 
     @staticmethod
     def _get_palette(ids, alpha=255):
@@ -50,28 +64,36 @@ class AnnVisualizer:
         }
         return palette
 
-    def _draw_bbox(self, ann_hoi, palette):
-        path_image = self.moma.get_paths(ids_hoi=[ann_hoi.id])[0]
+    def _draw_bbox(self, ann_hoi: HOI, palette):
+        hoi_id = assert_type(ann_hoi.id, str)
+        act_id = only(self.moma.get_ids_act(ids_hoi=[hoi_id]))
+        metadata = only(self.moma.get_metadata(ids_act=[act_id]))
+
+        path_image = only(self.moma.get_paths(ids_hoi=[hoi_id]))
         image = io.read_image(path_image).permute(1, 2, 0).numpy()
         image = Image.fromarray(image).convert("RGBA")
+
+        x_scale = metadata.width / image.width
+        y_scale = metadata.height / image.height
+        assert math.isclose(x_scale, y_scale, rel_tol=1e-2)
+        scale = math.sqrt(x_scale * y_scale) # geometric mean
 
         overlay = Image.new("RGBA", image.size, (0, 0, 0, 0))
         draw = ImageDraw.Draw(overlay, "RGBA")
         width_line = int(max(image.size) * 0.003)
 
-        font = font_manager.FontProperties(
+        font_props = font_manager.FontProperties(
             family="sans-serif", stretch="extra-condensed", weight="light"
         )
-        path_font = font_manager.findfont(font)
+        path_font = font_manager.findfont(font_props)
         font = ImageFont.truetype(path_font, int(max(image.size) * 0.02))
 
         for entity in ann_hoi.actors + ann_hoi.objects:
-            y1, x1, y2, x2 = (
-                entity.bbox.y1,
-                entity.bbox.x1,
-                entity.bbox.y2,
-                entity.bbox.x2,
-            )
+            bbox = BBox.scale(entity.bbox, scale_factor=scale)
+            y1 = bbox.y1
+            x1 = bbox.x1
+            y2 = bbox.y2
+            x2 = bbox.x2
             width_text, height_text = font.getsize(entity.cname)
             draw.rectangle(
                 ((x1, y1), (x2, y2)), width=width_line, outline=palette[entity.id][0]
@@ -98,20 +120,19 @@ class AnnVisualizer:
         return image.convert("RGB")
 
     @supress_stdout
-    def show_hoi(self, id_hoi, vstack=True):
-        path_hoi = osp.join(self.dir_vis, f"hoi/{id_hoi}.png")
+    def show_hoi(self, id_hoi: str, vstack: bool = True):
+        path_hoi = osp.join(self.hoi_dir, f"{id_hoi}.png")
 
         if osp.isfile(path_hoi):
             return path_hoi
 
-        os.makedirs(osp.join(self.dir_vis, "hoi"), exist_ok=True)
-
-        ann_hoi = self.moma.get_anns_hoi(ids_hoi=[id_hoi])[0]
+        act_id = only(self.moma.get_ids_act(ids_hoi=[id_hoi]))
+        ann_hoi = only(self.moma.get_anns_hoi(ids_hoi=[id_hoi]))
         palette = self._get_palette(ann_hoi.ids_actor + ann_hoi.ids_object, alpha=150)
 
         """ bbox """
         image = self._draw_bbox(ann_hoi, palette)
-        path_bbox = osp.join(self.dir_vis, f"hoi/bbox_{id_hoi}.png")
+        path_bbox = osp.join(self.hoi_dir, f"bbox_{id_hoi}.png")
         image.save(path_bbox)
 
         """ graph """
@@ -157,7 +178,7 @@ class AnnVisualizer:
         G.layout("neato")
         G.node_attr["fontname"] = "Arial"
         G.edge_attr["fontname"] = "Arial"
-        path_graph = osp.join(self.dir_vis, f"hoi/graph_{id_hoi}.eps")
+        path_graph = osp.join(self.hoi_dir, f"graph_{id_hoi}.eps")
         G.draw(path_graph)
 
         """ save """
@@ -204,26 +225,26 @@ class AnnVisualizer:
         return path_hoi
 
     @supress_stdout
-    def show_sact(self, id_sact, vstack=True):
-        path_sact = osp.join(self.dir_vis, f"sact/{id_sact}.gif")
-
+    def show_sact(self, id_sact: str, vstack: bool = True):
+        path_sact = osp.join(self.sact_dir, f"{id_sact}.gif")
         if osp.isfile(path_sact):
             return path_sact
 
-        os.makedirs(osp.join(self.dir_vis, "sact", id_sact), exist_ok=True)
+        cache_dir = osp.join(self.sact_dir, id_sact)
+        if os.path.exists(cache_dir):
+            shutil.rmtree(cache_dir)
+        os.makedirs(cache_dir, exist_ok=False)
 
-        ann_sact = self.moma.get_anns_sact(ids_sact=[id_sact])[0]
+        ann_sact = only(self.moma.get_anns_sact(ids_sact=[id_sact]))
         ids_hoi = self.moma.get_ids_hoi(ids_sact=[id_sact])
         anns_hoi = self.moma.get_anns_hoi(ids_hoi=ids_hoi)
         palette = self._get_palette(ann_sact.ids_actor + ann_sact.ids_object, alpha=200)
 
         """ bbox """
         for i, id_hoi in enumerate(ids_hoi):
-            ann_hoi = self.moma.get_anns_hoi(ids_hoi=[id_hoi])[0]
+            ann_hoi = only(self.moma.get_anns_hoi(ids_hoi=[id_hoi]))
             image = self._draw_bbox(ann_hoi, palette)
-            image.save(
-                osp.join(self.dir_vis, f"sact/{id_sact}/bbox_{str(i).zfill(2)}.png")
-            )
+            image.save(osp.join(cache_dir, f"bbox_{str(i).zfill(2)}.png"))
 
         """ graph """
         # get node & edge positions
@@ -342,30 +363,20 @@ class AnnVisualizer:
                     len=2,
                 )
 
-            G.draw(
-                osp.join(self.dir_vis, f"sact/{id_sact}/graph_{str(i).zfill(2)}.eps")
-            )
+            G.draw(osp.join(cache_dir, f"graph_{str(i).zfill(2)}.eps"))
             G.remove_nodes_from([info_node[0] for info_node in info_nodes])
 
-            id_act = self.moma.get_ids_act(ids_sact=[id_sact])[0]
+            id_act = only(self.moma.get_ids_act(ids_sact=[id_sact]))
             id_hoi = ann_hoi.id
-            path_timeline = osp.join(
-                self.dir_vis, f"sact/{id_sact}/timeline_{str(i).zfill(2)}.png"
-            )
+            path_timeline = osp.join(cache_dir, f"timeline_{str(i).zfill(2)}.png")
             self.timeline_visualizer.show(
                 id_act=id_act, id_sact=id_sact, id_hoi=id_hoi, path=path_timeline
             )
 
         """ save """
-        paths_bbox = sorted(
-            glob.glob(osp.join(self.dir_vis, f"sact/{id_sact}/bbox_*.png"))
-        )
-        paths_graph = sorted(
-            glob.glob(osp.join(self.dir_vis, f"sact/{id_sact}/graph_*.eps"))
-        )
-        paths_timeline = sorted(
-            glob.glob(osp.join(self.dir_vis, f"sact/{id_sact}/timeline_*.png"))
-        )
+        paths_bbox = sorted(glob.glob(osp.join(cache_dir, "bbox_*.png")))
+        paths_graph = sorted(glob.glob(osp.join(cache_dir, "graph_*.eps")))
+        paths_timeline = sorted(glob.glob(osp.join(cache_dir, f"timeline_*.png")))
 
         images_bbox = [Image.open(path_bbox) for path_bbox in paths_bbox]
         images_graph = [Image.open(path_graph) for path_graph in paths_graph]
@@ -452,7 +463,7 @@ class AnnVisualizer:
         )
 
         # cleanup
-        shutil.rmtree(osp.join(self.dir_vis, "sact", id_sact))
+        shutil.rmtree(cache_dir)
         [image_bbox.close() for image_bbox in images_bbox]
         [image_graph.close() for image_graph in images_graph]
         [image_timeline.close() for image_timeline in images_timeline]

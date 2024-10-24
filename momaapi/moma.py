@@ -6,6 +6,9 @@ from .lookup import Lookup
 from .statistics import Statistics
 from typing_extensions import Literal
 
+from .data import Metadatum, Act, SAct, HOI, Clip
+from .utils import assert_type
+
 
 """
 The following functions are defined:
@@ -33,7 +36,7 @@ The following attributes are defined:
  - taxonomy: an object that stores dataset taxonomy; please see taxonomy.py:53 for details
  - num_classes: number of activity and sub-activity classes
 
- 
+
 Definitions:
  - kind: ['act', 'sact', 'hoi', 'actor', 'object', 'att', 'rel']
    * Note: ['ia', 'ta'] are deprecated.
@@ -77,10 +80,10 @@ class MOMA:
     """
 
     def __init__(
-        self,
-        dir_moma: str,
-        paradigm: Literal["standard", "few-shot"] = "standard",
-        reset_cache: bool = False,
+            self,
+            dir_moma: str,
+            paradigm: Literal["standard", "few-shot"] = "standard",
+            reset_cache: bool = False,
     ):
         """
         Constructor for MOMA-LRG
@@ -95,15 +98,15 @@ class MOMA:
         self.statistics = Statistics(dir_moma, self.taxonomy, self.lookup, reset_cache)
 
     @property
-    def num_classes(self):
-        return self.taxonomy.get_num_classes()[self.paradigm]
+    def num_classes(self) -> int:
+        return assert_type(self.taxonomy.get_num_classes()[self.paradigm], int)
 
     def get_cids(
         self,
         kind: Literal["act", "sact", "actor", "object", "att", "rel"],
         threshold: int,
         split: Literal["train", "val", "test", "either", "all", "combined"],
-    ) -> list:
+    ) -> list[str]:
         """
         :param kind: the kind of annotations needed to be retrieved
         :type kind: Literal['act', 'sact', 'actor', 'object', 'att', 'rel']
@@ -126,11 +129,11 @@ class MOMA:
     def map_cids(
         self,
         split: Literal["train", "val", "test", "either", "all", "combined"],
-        cids_act_contiguous: list = None,
-        cids_act: list = None,
-        cids_sact_contiguous: list = None,
-        cids_sact: list = None,
-    ) -> list:
+        cids_act_contiguous: list[str] = None,
+        cids_act: list[str] = None,
+        cids_sact_contiguous: list[str] = None,
+        cids_sact: list[str] = None,
+    ) -> list[str]:
         """
         Map class IDs between standard class IDs and split-specific contiguous class IDs.
         **For the few-shot paradigm only**.
@@ -186,8 +189,15 @@ class MOMA:
         else:
             raise ValueError
 
-    def get_cnames(self, cids_act: list = None, cids_sact: list = None, cids_actor: list = None,
-                   cids_object: list = None, cids_att: list = None, cids_rel: list = None) -> list:
+    def get_cnames(
+            self,
+            cids_act: list[str] = None,
+            cids_sact: list[str] = None,
+            cids_actor: list[str] = None,
+            cids_object: list[str] = None,
+            cids_att: list[str] = None,
+            cids_rel: list[str] = None,
+    ) -> list[str]:
         """
         Returns the associated class names given the class IDs.
 
@@ -225,7 +235,12 @@ class MOMA:
         cnames = [self.taxonomy[kind][cid] for cid in cids]
         return cnames
 
-    def is_sact(self, id_act: int, time: int, absolute: bool = False) -> bool:
+    def is_sact(
+            self,
+            id_act: int,
+            time: int,
+            absolute: bool = False,
+    ) -> bool:
         """
         Checks whether a certain time in an activity has a sub-activity.
 
@@ -238,25 +253,25 @@ class MOMA:
         :type absolute: bool
         """
         if not absolute:
-            ann_act = self.lookup.retrieve("ann_act", id_act)
+            ann_act = assert_type(self.lookup.retrieve("ann_act", id_act), Act)
             time = ann_act.start + time
 
         is_sact = False
         ids_sact = self.lookup.map_id("ids_sact", id_act=id_act)
         for id_sact in ids_sact:
-            ann_sact = self.lookup.retrieve("ann_sact", id_sact)
+            ann_sact = assert_type(self.lookup.retrieve("ann_sact", id_sact), SAct)
             if ann_sact.start <= time < ann_sact.end:
                 is_sact = True
 
         return is_sact
 
     def get_ids_act(
-        self,
-        split: str = None,
-        cnames_act: list = None,
-        ids_sact: list = None,
-        ids_hoi: list = None,
-    ) -> list:
+            self,
+            split: str = None,
+            cnames_act: list[str] = None,
+            ids_sact: list[str] = None,
+            ids_hoi: list[str] = None,
+    ) -> list[str]:
         """
         Get the unique activity instance IDs that satisfy certain conditions
 
@@ -287,7 +302,7 @@ class MOMA:
         if cnames_act is not None:
             ids_act = []
             for id_act in self.lookup.retrieve("ids_act"):
-                ann_act = self.lookup.retrieve("ann_act", id_act)
+                ann_act = assert_type(self.lookup.retrieve("ann_act", id_act), Act)
                 if ann_act.cname in cnames_act:
                     ids_act.append(id_act)
             ids_act_intersection.append(ids_act)
@@ -309,9 +324,17 @@ class MOMA:
         ids_act_intersection = sorted(set.intersection(*map(set, ids_act_intersection)))
         return ids_act_intersection
 
-    def get_ids_sact(self, split: str = None, cnames_sact: list = None, ids_act: list = None, ids_hoi: list = None,
-                     cnames_actor: list = None, cnames_object: list = None, cnames_att: list = None,
-                     cnames_rel: list = None) -> list:
+    def get_ids_sact(
+            self,
+            split: str = None,
+            cnames_sact: list[str] = None,
+            ids_act: list[str] = None,
+            ids_hoi: list[str] = None,
+            cnames_actor: list[str] = None,
+            cnames_object: list[str] = None,
+            cnames_att: list[str] = None,
+            cnames_rel: list[str] = None,
+    ) -> list[str]:
         """
         Get the unique sub-activity instance IDs that satisfy certain conditions
         dataset split
@@ -362,7 +385,7 @@ class MOMA:
         if cnames_sact is not None:
             ids_sact = []
             for id_sact in self.lookup.retrieve("ids_sact"):
-                ann_sact = self.lookup.retrieve("ann_sact", id_sact)
+                ann_sact = assert_type(self.lookup.retrieve("ann_sact", id_sact), SAct)
                 if ann_sact.cname in cnames_sact:
                     ids_sact.append(id_sact)
             ids_sact_intersection.append(ids_sact)
@@ -408,8 +431,16 @@ class MOMA:
         )
         return ids_sact_intersection
 
-    def get_ids_hoi(self, split: str = None, ids_act: list = None, ids_sact: list = None, cnames_actor: list = None,
-                    cnames_object: list = None, cnames_att: list = None, cnames_rel: list = None) -> list:
+    def get_ids_hoi(
+            self,
+            split: str = None,
+            ids_act: list[str] = None,
+            ids_sact: list[str] = None,
+            cnames_actor: list[str] = None,
+            cnames_object: list[str] = None,
+            cnames_att: list[str] = None,
+            cnames_rel: list[str] = None,
+    ) -> list[str]:
         """
         Get the unique higher-order interaction instance IDs that satisfy certain conditions
         dataset split
@@ -489,7 +520,7 @@ class MOMA:
         ids_hoi_intersection = sorted(set.intersection(*map(set, ids_hoi_intersection)))
         return ids_hoi_intersection
 
-    def get_metadata(self, ids_act: list) -> list:
+    def get_metadata(self, ids_act: list[str]) -> list[Metadatum]:
         """
         Get the metadata for the given activity IDs. The metadata returned
         is that associated with the raw videos that contain instances of the
@@ -499,9 +530,12 @@ class MOMA:
         :return: video metadata for the given activity ID
         :rtype: list
         """
-        return [self.lookup.retrieve("metadatum", id_act) for id_act in ids_act]
+        return [
+            assert_type(self.lookup.retrieve("metadatum", id_act), Metadatum)
+            for id_act in ids_act
+        ]
 
-    def get_anns_act(self, ids_act: list) -> list:
+    def get_anns_act(self, ids_act: list[str]) -> list[Act]:
         """
         Given activity instance IDs, return their annotations
 
@@ -509,9 +543,12 @@ class MOMA:
         :return: annotations for the given activity instance IDs
         :rtype: list
         """
-        return [self.lookup.retrieve("ann_act", id_act) for id_act in ids_act]
+        return [
+            assert_type(self.lookup.retrieve("ann_act", id_act), Act)
+            for id_act in ids_act
+        ]
 
-    def get_anns_sact(self, ids_sact: list) -> list:
+    def get_anns_sact(self, ids_sact: list[str]) -> list[SAct]:
         """
         Given sub-activity instance IDs, return their annotations
 
@@ -519,9 +556,12 @@ class MOMA:
         :return: annotations for the given sub-activity instance IDs
         :rtype: list
         """
-        return [self.lookup.retrieve("ann_sact", id_sact) for id_sact in ids_sact]
+        return [
+            assert_type(self.lookup.retrieve("ann_sact", id_sact), SAct)
+            for id_sact in ids_sact
+        ]
 
-    def get_anns_hoi(self, ids_hoi: list) -> list:
+    def get_anns_hoi(self, ids_hoi: list[str]) -> list[HOI]:
         """
         Given higher-order interaction instance IDs, return their annotations
 
@@ -529,9 +569,12 @@ class MOMA:
         :return: annotations for the given higher-order interaction instance IDs
         :rtype: list
         """
-        return [self.lookup.retrieve("ann_hoi", id_hoi) for id_hoi in ids_hoi]
+        return [
+            assert_type(self.lookup.retrieve("ann_hoi", id_hoi), HOI)
+            for id_hoi in ids_hoi
+        ]
 
-    def get_clips(self, ids_hoi: list) -> list:
+    def get_clips(self, ids_hoi: list[str]) -> list[Clip]:
         """
         Given higher-order interaction instance IDs, return their clips
 
@@ -539,17 +582,20 @@ class MOMA:
         :return: clips for the given higher-order interaction instance IDs
         :rtype: list
         """
-        return [self.lookup.retrieve("clip", id_hoi) for id_hoi in ids_hoi]
+        return [
+            assert_type(self.lookup.retrieve("clip", id_hoi), Clip)
+            for id_hoi in ids_hoi
+        ]
 
     def get_paths(
-        self,
-        ids_act: list = None,
-        ids_sact: list = None,
-        ids_hoi: list = None,
-        id_hoi_clip: str = None,
-        full_res: bool = False,
-        sanity_check: bool = True,
-    ) -> list:
+            self,
+            ids_act: list = None,
+            ids_sact: list = None,
+            ids_hoi: list = None,
+            id_hoi_clip: str = None,
+            full_res: bool = False,
+            sanity_check: bool = True,
+    ) -> list[str]:
         """
         Given activity, sub-activity, higher-order interaction, or clip IDs, return the paths to the videos.
 
@@ -613,7 +659,10 @@ class MOMA:
         return paths
 
     def sort(
-        self, ids_sact: list = None, ids_hoi: list = None, sanity_check: bool = True
+            self,
+            ids_sact: list = None,
+            ids_hoi: list = None,
+            sanity_check: bool = True,
     ):
         """
         Given a list of sub-activity or higher-order interaction instance IDs, return them in sorted order

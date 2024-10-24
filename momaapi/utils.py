@@ -2,6 +2,23 @@ import contextlib
 from functools import wraps
 import os
 import time
+from typing import Iterable, TypeVar
+
+
+def assert_type(x, t):
+    assert isinstance(x, t)
+    return x
+
+
+def assert_list_type(x, t):
+    return [assert_type(xx, t) for xx in assert_type(x, list)]
+
+
+T = TypeVar("T")
+
+def only(it: Iterable[T]) -> T:
+    x, = it
+    return x
 
 
 def timeit(f):

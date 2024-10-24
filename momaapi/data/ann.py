@@ -1,4 +1,7 @@
 import numpy as np
+from typing import Any, Mapping, Optional
+
+from ..utils import assert_type
 
 
 class Metadatum:
@@ -15,13 +18,13 @@ class Metadatum:
     :ivar duration: Duration of the video in seconds
     """
 
-    def __init__(self, ann):
-        self.id = ann["activity"]["id"]
-        self.fname = ann["file_name"]
-        self.num_frames = ann["num_frames"]
-        self.width = ann["width"]
-        self.height = ann["height"]
-        self.duration = ann["duration"]
+    def __init__(self, ann: Mapping[str, Any]):
+        self.id = assert_type(ann["activity"]["id"], str)
+        self.fname = assert_type(ann["file_name"], str)
+        self.num_frames = assert_type(ann["num_frames"], int)
+        self.width = assert_type(ann["width"], int)
+        self.height = assert_type(ann["height"], int)
+        self.duration = assert_type(ann["duration"], float)
 
     def get_fid(self, time):
         """
@@ -61,7 +64,7 @@ class Act:
     :ivar ids_sact: List of sub-activity IDs
     """
 
-    def __init__(self, ann, taxonomy):
+    def __init__(self, ann: Mapping[str, Any], taxonomy):
         self.id = ann["id"]
         self.cname = ann["class_name"]
         self.cid = taxonomy.index(ann["class_name"])
@@ -123,13 +126,19 @@ class SAct:
         )
 
         # group annotations by entity ID and frame ID
-        actors = {id_actor: [None for _ in self.ids_hoi] for id_actor in ids_actor}
-        objects = {id_object: [None for _ in self.ids_hoi] for id_object in ids_object}
-        atts = {
+        actors: dict[str, list[Optional[Entity]]] = {
+            id_actor: [None for _ in self.ids_hoi]
+            for id_actor in ids_actor
+        }
+        objects: dict[str, list[Optional[Entity]]] = {
+            id_object: [None for _ in self.ids_hoi]
+            for id_object in ids_object
+        }
+        atts: dict[str, list[list[Predicate]]] = {
             id_entity: [[] for _ in self.ids_hoi]
             for id_entity in ids_actor + ids_object
         }
-        rels = {
+        rels: dict[str, list[list[Predicate]]] = {
             id_entity: [[] for _ in self.ids_hoi]
             for id_entity in ids_actor + ids_object
         }
@@ -320,11 +329,11 @@ class BBox:
     :ivar h: height of the bounding box
     """
 
-    def __init__(self, ann):
+    def __init__(self, ann: tuple[int, int, int, int]):
         self.x, self.y, self.width, self.height = ann
 
     @classmethod
-    def scale(cls, bbox, scale_factor):
+    def scale(cls, bbox: "BBox", scale_factor: float):
         return cls(
             (
                 round(bbox.x / scale_factor),
