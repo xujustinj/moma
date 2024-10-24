@@ -1,4 +1,3 @@
-import glob
 import json
 import math
 import os
@@ -6,6 +5,7 @@ from typing import Any, Optional
 
 import ffmpeg
 from torchvision import io
+from tqdm import tqdm
 
 from .utils import assert_type
 
@@ -52,36 +52,37 @@ class VideoProcessor:
             self,
             new_timestamps: dict[str, list[tuple[str, float]]]
     ):
-        # keep file locked for writing for the entire time
-        # also don't overwrite existing contents
-        with open(self.hoi_timestamps_path, "a+") as f:
-            f.seek(0)
-            s = f.read()
-            saved_timestamps: dict[str, list[tuple[str, float]]] = {}
-            if len(s) > 0:
-                saved_timestamps = assert_type(json.loads(s), dict)
+        # WARNING: this function is not thread safe
+        saved_timestamps: dict[str, list[tuple[str, float]]] = {}
+        if os.path.exists(self.hoi_timestamps_path):
+            with open(self.hoi_timestamps_path) as f:
+                s = f.read()
+                if len(s) > 0:
+                    saved_timestamps = assert_type(json.loads(s), dict)
+
+                    # validation
+                    for k, v in saved_timestamps.items():
+                        assert isinstance(k, str)
+                        assert isinstance(v, list)
+                        for id, t in v:
+                            assert isinstance(id, str)
+                            assert isinstance(t, float)
+
+        for key, timestamps in new_timestamps.items():
+            if key in saved_timestamps:
+                assert saved_timestamps[key] == timestamps
             else:
-                saved_timestamps = {}
+                saved_timestamps[key] = timestamps
 
-            # validation
-            for k, v in saved_timestamps.items():
-                assert isinstance(k, str)
-                assert isinstance(v, list)
-                for id, t in v:
-                    assert isinstance(id, str)
-                    assert isinstance(t, float)
+        with open(self.hoi_timestamps_path, "w") as f:
+            json.dump(saved_timestamps, f, indent=2, sort_keys=True)
 
-            for key, timestamps in new_timestamps.items():
-                if key in saved_timestamps:
-                    assert saved_timestamps[key] == timestamps
-                else:
-                    saved_timestamps[key] = timestamps
-
-            f.seek(0)
-            f.write(json.dumps(saved_timestamps, indent=2, sort_keys=True))
-            f.truncate()
-
-    def sample_image(self, path_src: str, path_trg: str, time: float):
+    def sample_image(
+            self,
+            path_src: str,
+            path_trg: str,
+            time: float,
+    ):
         ffmpeg.input(path_src, ss=time) \
             .output(path_trg, vframes=1, loglevel=self.log_level) \
             .run()
@@ -158,7 +159,7 @@ class VideoProcessor:
         assert os.path.exists(path_src)
 
         sub_activities: list[dict] = assert_type(ann["activity"]["sub_activities"], list)
-        for ann_sact in sub_activities:
+        for ann_sact in tqdm(sub_activities):
             sact_id = assert_type(ann_sact['id'], str)
             path_trg = os.path.join(self.sub_activities_dir, f"{sact_id}.mp4")
             if not os.path.exists(path_trg) or overwrite:
@@ -189,33 +190,34 @@ class VideoProcessor:
         path_src = os.path.join(self.raw_dir, filename)
         assert os.path.exists(path_src)
 
-        anns_sact: list[dict] = assert_type(ann["activity"]["sub_activities"], list)
-        for ann_sact in anns_sact:
-            anns_hoi = assert_type(ann_sact["higher_order_interactions"], list)
-            anns_hoi = sorted(anns_hoi, key=lambda x: x["time"])
-            for ann_hoi in anns_hoi:
-                hoi_id = assert_type(ann_hoi['id'], str)
-                path_trg = os.path.join(self.hoi_videos_dir, f"{hoi_id}.mp4")
-                if not os.path.exists(path_trg) or overwrite:
-                    if ann_hoi["time"] - duration / 2 < 0:
-                        start = 0
-                        end = duration
-                    elif ann_hoi["time"] + duration / 2 > ann["duration"]:
-                        end = ann["duration"]
-                        start = end - duration
-                    else:
-                        start = ann_hoi["time"] - duration / 2
-                        end = start + duration
-                    assert math.isclose(end - start, duration, rel_tol=1e-4), \
-                        f"{ann_hoi['time']} -> [{start}, {end}) ({duration}s) from [0, {ann['duration']})"
-                    self.trim_video(
-                        path_src=path_src,
-                        path_trg=path_trg,
-                        start=start,
-                        end=end,
-                        resize=resize,
-                    )
-                paths_trg.append(path_trg)
+        anns_hoi: list[dict] = sorted([
+            ann_hoi
+            for ann_sact in assert_type(ann["activity"]["sub_activities"], list)
+            for ann_hoi in assert_type(ann_sact["higher_order_interactions"], list)
+        ], key=lambda x: x["time"])
+        for ann_hoi in tqdm(anns_hoi):
+            hoi_id = assert_type(ann_hoi['id'], str)
+            path_trg = os.path.join(self.hoi_videos_dir, f"{hoi_id}.mp4")
+            if not os.path.exists(path_trg) or overwrite:
+                if ann_hoi["time"] - duration / 2 < 0:
+                    start = 0
+                    end = duration
+                elif ann_hoi["time"] + duration / 2 > ann["duration"]:
+                    end = ann["duration"]
+                    start = end - duration
+                else:
+                    start = ann_hoi["time"] - duration / 2
+                    end = start + duration
+                assert math.isclose(end - start, duration, rel_tol=1e-4), \
+                    f"{ann_hoi['time']} -> [{start}, {end}) ({duration}s) from [0, {ann['duration']})"
+                self.trim_video(
+                    path_src=path_src,
+                    path_trg=path_trg,
+                    start=start,
+                    end=end,
+                    resize=resize,
+                )
+            paths_trg.append(path_trg)
 
         return paths_trg
 
@@ -227,20 +229,22 @@ class VideoProcessor:
         path_src = os.path.join(self.raw_dir, filename)
         assert os.path.exists(path_src)
 
-        anns_sact = assert_type(ann["activity"]["sub_activities"], list)
-        for ann_sact in anns_sact:
-            anns_hoi = assert_type(ann_sact["higher_order_interactions"], list)
-            for ann_hoi in anns_hoi:
-                hoi_id = assert_type(ann_hoi['id'], str)
-                path_trg = os.path.join(self.hoi_dir, f"{hoi_id}.jpg")
-                if not os.path.exists(path_trg) or overwrite:
-                    time = assert_type(ann_hoi["time"], float)
-                    self.sample_image(
-                        path_src=path_src,
-                        path_trg=path_trg,
-                        time=time,
-                    )
-                paths_trg.append(path_trg)
+        anns_hoi: list[dict] = sorted([
+            ann_hoi
+            for ann_sact in assert_type(ann["activity"]["sub_activities"], list)
+            for ann_hoi in assert_type(ann_sact["higher_order_interactions"], list)
+        ], key=lambda x: x["time"])
+        for ann_hoi in tqdm(anns_hoi):
+            hoi_id = assert_type(ann_hoi['id'], str)
+            path_trg = os.path.join(self.hoi_dir, f"{hoi_id}.jpg")
+            if not os.path.exists(path_trg) or overwrite:
+                time = assert_type(ann_hoi["time"], float)
+                self.sample_image(
+                    path_src=path_src,
+                    path_trg=path_trg,
+                    time=time,
+                )
+            paths_trg.append(path_trg)
 
         return paths_trg
 
@@ -262,7 +266,7 @@ class VideoProcessor:
 
         new_timestamps: dict[str, list[tuple[str, float]]] = {}
         anns_sact = assert_type(ann["activity"]["sub_activities"], list)
-        for ann_sact in anns_sact:
+        for ann_sact in tqdm(anns_sact):
             anns_hoi = ann_sact["higher_order_interactions"]
             anns_hoi = sorted(anns_hoi, key=lambda x: x["time"])
             for i, ann_hoi in enumerate(anns_hoi):
