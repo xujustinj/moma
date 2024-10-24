@@ -3,6 +3,11 @@ import string
 import time
 
 
+def assert_type(x, t):
+    assert isinstance(x, t)
+    return x
+
+
 def hms2s(hms):
     dt = datetime.datetime.strptime(hms, "%H:%M:%S")
     seconds = datetime.timedelta(
